@@ -98,6 +98,18 @@ describe('T', () => {
     should(() => T.not(T.Object())(42)).not.throw();
     should(() => T.not(T.Object())({})).throw();
   });
+  it('T.nullable()', () => {
+    should(() => T.nullable(T.Number())(null)).not.throw();
+    should(() => T.nullable(T.Number())(42)).not.throw();
+    should(() => T.nullable(T.Number())('42')).throw();
+    should(() => T.nullable(T.Number())(void 0)).throw();
+  });
+  it('T.option()', () => {
+    should(() => T.option(T.Number())(void 0)).not.throw();
+    should(() => T.option(T.Number())(42)).not.throw();
+    should(() => T.option(T.Number())('42')).throw();
+    should(() => T.option(T.Number())(null)).throw();
+  });
   it('T.shape()', () => {
     should(() => T.shape({})(42)).throw();
     should(() => T.shape({ a: T.Number() })({ a: 42 })).not.throw();

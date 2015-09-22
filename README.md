@@ -22,8 +22,8 @@ class Person {
     return this.age * n;
   }
 
-  // takes an object describing the country and the city, and a zipcode,
-  // and returns a bool.
+  // takes an object describing the country and the city, and an
+  // optional zipcode, and returns a bool.
   // the city can be either 'Paris' or 'New York'
   // the country can be either 'France' or 'United States'
   // the zipcode must be correctly formatted
@@ -33,12 +33,15 @@ class Person {
         country: T.oneOf(T.exactly('France'), T.exactly('United States')),
         city: T.oneOf(T.exactly('Paris'), T.exactly('New York')),
       }),
-      T.String({ match: /^[0-9]{5}$/ }),
+      T.option(T.String({ match: /^[0-9]{5}$/ })),
     ],
     T.bool()
   )
   livesIn({ country, city }, zipCode) {
-    return this.country === country && this.city === city;
+    return
+      this.country === country &&
+      this.city === city &&
+      zipCode && this.zipCode === zipCode;
   }
 }
 
@@ -64,14 +67,24 @@ T.shouldTypeCheck = () => process.env.SHOULD_TYPE_CHECK
 By default, `T.shouldTypeCheck` is `process && process.env && process.env === 'developmment'`.
 
 Types can be described using the provided type descriptors and operators. A type being basically an assertion,
-you can easily implement your own using the `T` function, which creates a new type:
+you can easily implement your own:
 
-```const zipCodeType = T((x) => assert(x.match(/^[0-9]{5}$/) !== null);```
+```js
+const (x) => assert(x.match(/^[0-9]{5}$/) !== null);
+```
+
+Type operators return new types which can be assigned to variables or reused in expressions:
+
+```js
+const optZipCode = T.option(zipCodeType);
+const nullableStringOrOptZipCode = T.oneOf(optZipCode, T.nullable(T.String()))
+```
 
 See the example test file below to have an idea of what type descriptors and operators are provided.
 
 ```js
-mport T, { typecheck } from '../';
+
+import T, { typecheck } from '../';
 
 describe('T', () => {
   it('T.any()', () => {
@@ -165,6 +178,18 @@ describe('T', () => {
   it('T.not()', () => {
     should(() => T.not(T.Object())(42)).not.throw();
     should(() => T.not(T.Object())({})).throw();
+  });
+  it('T.nullable()', () => {
+    should(() => T.nullable(T.Number())(null)).not.throw();
+    should(() => T.nullable(T.Number())(42)).not.throw();
+    should(() => T.nullable(T.Number())('42')).throw();
+    should(() => T.nullable(T.Number())(void 0)).throw();
+  });
+  it('T.option()', () => {
+    should(() => T.option(T.Number())(void 0)).not.throw();
+    should(() => T.option(T.Number())(42)).not.throw();
+    should(() => T.option(T.Number())('42')).throw();
+    should(() => T.option(T.Number())(null)).throw();
   });
   it('T.shape()', () => {
     should(() => T.shape({})(42)).throw();

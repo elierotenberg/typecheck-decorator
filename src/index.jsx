@@ -103,6 +103,12 @@ const T = {
   not(type) {
     return (x) => should(() => type(x)).throw();
   },
+  nullable(type) {
+    return (x) => x === null || type(x);
+  },
+  option(type) {
+    return (x) => x === void 0 || type(x);
+  },
   shape(t) {
     return (x) => {
       // T([T.Number(), T.String(), T.Array(T.Number())]) ~ [1, 'foo', [1, 42]]
