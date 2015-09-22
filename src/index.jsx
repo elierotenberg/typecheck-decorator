@@ -139,9 +139,13 @@ function wrap(argsT, valT, fn) {
     return fn;
   }
   return function wrapped(...args) {
-    assertTypes(argsT, args);
+    if(argsT !== void 0) {
+      assertTypes(argsT, args);
+    }
     const val = fn.apply(this, args);
-    assertTypes([valT], [val]);
+    if(valT !== void 0) {
+      assertTypes([valT], [val]);
+    }
     return val;
   };
 }
@@ -156,4 +160,12 @@ function typecheck(argsT, valT, fn) {
   });
 }
 
-export default Object.assign(T, { typecheck });
+function takes(...argsT) {
+  return typecheck(argsT, void 0);
+}
+
+function returns(valT) {
+  return typecheck(void 0, valT);
+}
+
+export default Object.assign(T, { typecheck, takes, returns });

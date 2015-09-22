@@ -3,7 +3,7 @@ import Promise from 'bluebird';
 Promise.longStackTraces();
 const { describe, it, before, after } = global;
 
-import T, { typecheck } from '../';
+import T, { typecheck, takes, returns } from '../';
 
 describe('T', () => {
   it('T.any()', () => {
@@ -155,5 +155,64 @@ describe('typecheck', () => {
     }
     should(() => new A(1, 2).sum()).not.throw();
     should(() => new A('42', '42').sum()).throw();
+  });
+  it('class static method takes', () => {
+    class A {
+      @takes(T.Number(), T.Number())
+      static sum(a, b) {
+        return a + b;
+      }
+    }
+    should(() => A.sum(1, 2)).not.throw();
+    should(() => A.sum('42', '42')).throw();
+  });
+  it('class method takes', () => {
+    class A {
+      constructor(a, b) {
+        this.a = a;
+        this.b = b;
+      }
+      @takes(T.Number())
+      sum(c) {
+        return this.a + this.b + c;
+      }
+    }
+    should(() => new A(1, 2).sum(3)).not.throw();
+    should(() => new A('42', '42').sum('42')).throw();
+  });
+  it('class static method returns', () => {
+    class A {
+      @returns(T.Number())
+      static sum(a, b) {
+        return a + b;
+      }
+    }
+    should(() => A.sum(1, 2)).not.throw();
+    should(() => A.sum('42', '42')).throw();
+  });
+  it('class method returns', () => {
+    class A {
+      constructor(a, b) {
+        this.a = a;
+        this.b = b;
+      }
+      @returns(T.Number())
+      sum() {
+        return this.a + this.b;
+      }
+    }
+    should(() => new A(1, 2).sum()).not.throw();
+    should(() => new A('42', '42').sum()).throw();
+  });
+  it('class static method takes & returns', () => {
+    class A {
+      @takes(T.Number(), T.any())
+      @returns(T.Number())
+      static sum(a, b) {
+        return a + b;
+      }
+    }
+    should(() => A.sum(1, 2)).not.throw();
+    should(() => A.sum(42, '42')).throw();
   });
 });

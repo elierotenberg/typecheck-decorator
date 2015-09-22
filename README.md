@@ -43,6 +43,41 @@ class Person {
       this.city === city &&
       zipCode && this.zipCode === zipCode;
   }
+
+  // alternate syntax, to ignore return type and remove []
+  @takes(
+    T.Number(),
+    T.eachOf(
+      T.String(),
+      T.oneOf(T.exactly('Paris'), T.exactly('New York'))
+    )
+  )
+  setAgeAndCountry(age, country) {
+    this.age = age;
+    this.country = country;
+  }
+
+  // alternate syntax, to ignore args types
+  @returns(T.Number())
+  getAge() {
+    return this.age;
+  }
+
+  // combine alternate syntax
+  @takes(T.shape({
+    foo: T.String(),
+    buzz: T.String(),
+  }))
+  @returns(T.shape({
+    bar: T.String(),
+    buzz: T.String(),
+  }))
+  static reverse({ foo, bar }) {
+    return {
+      [foo]: 'foo',
+      [bar]: 'bar',
+    };
+  }
 }
 
 // also works with regular functions
@@ -58,6 +93,10 @@ const sum = typecheck([T.Number(), T.Number()], T.Number(),
 
 ```@typecheck(argsTypes = [], valueType = T.any())``` decorates a method with type checks.
 
+```@takes(...argsTypes)``` is an alias for ```@typecheck(argTypes, void 0)``` which ignores return value type.
+
+```@returns(valType)``` is an alias for ```@typecheck(void 0, valType)``` which ignores arguments types.
+
 You can disable typechecking entirely by setting `T.shouldTypeCheck` to `false`. You can also specify a function
 to dynamically decide if types should be checked (upon calling `typecheck` or `@typecheck`), e.g using:
 ```js
@@ -70,13 +109,13 @@ Types can be described using the provided type descriptors and operators. A type
 you can easily implement your own:
 
 ```js
-const (x) => assert(x.match(/^[0-9]{5}$/) !== null);
+T.zipCode = (x) => assert(x.match(/^[0-9]{5}$/) !== null);
 ```
 
 Type operators return new types which can be assigned to variables or reused in expressions:
 
 ```js
-const optZipCode = T.option(zipCodeType);
+const optZipCode = T.option(T.zipCode);
 const nullableStringOrOptZipCode = T.oneOf(optZipCode, T.nullable(T.String()))
 ```
 
@@ -236,6 +275,65 @@ describe('typecheck', () => {
     }
     should(() => new A(1, 2).sum()).not.throw();
     should(() => new A('42', '42').sum()).throw();
+  });
+  it('class static method takes', () => {
+    class A {
+      @takes(T.Number(), T.Number())
+      static sum(a, b) {
+        return a + b;
+      }
+    }
+    should(() => A.sum(1, 2)).not.throw();
+    should(() => A.sum('42', '42')).throw();
+  });
+  it('class method takes', () => {
+    class A {
+      constructor(a, b) {
+        this.a = a;
+        this.b = b;
+      }
+      @takes(T.Number())
+      sum(c) {
+        return this.a + this.b + c;
+      }
+    }
+    should(() => new A(1, 2).sum(3)).not.throw();
+    should(() => new A('42', '42').sum('42')).throw();
+  });
+  it('class static method returns', () => {
+    class A {
+      @returns(T.Number())
+      static sum(a, b) {
+        return a + b;
+      }
+    }
+    should(() => A.sum(1, 2)).not.throw();
+    should(() => A.sum('42', '42')).throw();
+  });
+  it('class method returns', () => {
+    class A {
+      constructor(a, b) {
+        this.a = a;
+        this.b = b;
+      }
+      @returns(T.Number())
+      sum() {
+        return this.a + this.b;
+      }
+    }
+    should(() => new A(1, 2).sum()).not.throw();
+    should(() => new A('42', '42').sum()).throw();
+  });
+  it('class static method takes & returns', () => {
+    class A {
+      @takes(T.Number(), T.any())
+      @returns(T.Number())
+      static sum(a, b) {
+        return a + b;
+      }
+    }
+    should(() => A.sum(1, 2)).not.throw();
+    should(() => A.sum(42, '42')).throw();
   });
 });
 ```
