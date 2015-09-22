@@ -127,10 +127,10 @@ import T, { typecheck } from '../';
 
 describe('T', () => {
   it('T.any()', () => {
-    should(() => T.any(42)).not.throw();
-    should(() => T.any(void 0)).not.throw();
-    should(() => T.any(null)).not.throw();
-    should(() => T.any({})).not.throw();
+    should(() => T.any()(42)).not.throw();
+    should(() => T.any()(void 0)).not.throw();
+    should(() => T.any()(null)).not.throw();
+    should(() => T.any()({})).not.throw();
   });
   it('T.instanceOf()', () => {
     class C1 {}
