@@ -6,7 +6,7 @@ import plumber from 'gulp-plumber';
 import sourcemaps from 'gulp-sourcemaps';
 import rimraf from 'rimraf';
 
-import babelConfig from '../babelConfig';
+import babelConfig from './babelConfig';
 
 gulp.task('clean', (done) =>
   rimraf('./dist', done)

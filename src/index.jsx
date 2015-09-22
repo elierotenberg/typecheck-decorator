@@ -1,48 +1,11 @@
 import should from 'should/as-function';
-const shouldTypeCheck = process && process.env && process.env.NODE_ENV === 'development';
 
-function assertArgs(types, args) {
-  should(types).be.an.Array();
-  return args.map((v, k) => types[k](v));
-}
-
-function wrap(types, fn) {
-  if((typeof shouldTypeCheck === 'function' && shouldTypeCheck()) || shouldTypeCheck) {
-    return fn;
-  }
-  return function wrapped(...args) {
-    assertArgs(types, args);
-    return fn.apply(this, args);
-  };
-}
-
-function check(...types) {
-  return (target, name, descriptor) => ({
-    ...descriptor,
-    value: wrap(types, descriptor.value),
-  });
-}
-
-function T(t) {
-  return (x) => {
-    // T([T.Number(), T.String(), T.Array(T.Number())]) ~ [1, 'foo', [1, 42]]
-    if(t instanceof Array) {
-      should(x).be.an.Array();
-      return t.map((v, k) => v(x[k]));
-    }
-    // T({ foo: T.String(), bar: T.Number() }) ~ { foo: 'fizz', bar: 42 }
-    if(t instanceof Object) {
-      should(x).be.an.Object();
-      return Object.keys(t).map((k) => t[k](x[k]));
-    }
-    // T((x) => should(x).be.exactly(42)) ~ 42
-    if(t instanceof Function) {
-      t(x);
-    }
-  };
-}
-
-Object.assign(T, {
+const T = {
+  shouldTypeCheck: process && process.env && process.env.NODE_ENV === 'development',
+  // T.any() ~ 243
+  any() {
+    return (x) => void x;
+  },
   // T.instanceOf(Constructor) ~ new Constructor()
   instanceOf(Class) {
     return (x) => should(x).be.an.instanceOf(Class);
@@ -51,9 +14,16 @@ Object.assign(T, {
   exactly(v) {
     return (x) => should(x).be.exactly(v);
   },
+  // T.deepEqual({ a: 11 }) ~ { a: 11 }
+  deepEqual(v) {
+    return (x) => should(x).eql(v);
+  },
+  bool() {
+    return (x) => should(x).equalOneOf(true, false);
+  },
   // T.Number() ~ 1
   // T.Number({ within: [4, 5] }) ~ 4.5
-  Number({ above, below, within }) {
+  Number({ above, below, within } = {}) {
     return (x) => {
       should(x).be.a.Number();
       if(above !== void 0) {
@@ -67,7 +37,7 @@ Object.assign(T, {
       }
     };
   },
-  String({ length, match }) {
+  String({ length, match } = {}) {
     return (x) => {
       should(x).be.a.String();
       if(length !== void 0) {
@@ -78,7 +48,7 @@ Object.assign(T, {
       }
     };
   },
-  Array({ type, length }) {
+  Array({ type, length } = {}) {
     return (x) => {
       should(x).be.an.Array();
       if(type) {
@@ -89,14 +59,28 @@ Object.assign(T, {
       }
     };
   },
-  Object({ type, length }) {
+  Object({ type, length } = {}) {
     return (x) => {
       should(x).be.an.Object();
       if(type) {
         Object.keys(x).forEach((k) => type(x[k]));
       }
       if(length !== void 0) {
-        should(Object.keys(x).length).should.exactly(length);
+        should(Object.keys(x).length).be.exactly(length);
+      }
+    };
+  },
+  Function(argsT = T.any(), retT = T.any()) {
+    return (x) => {
+      should(x).be.a.Function();
+      return () => T.typecheck(argsT, retT)(x);
+    };
+  },
+  Promise({ type } = {}) {
+    return (x) => {
+      T.shape({ then: T.Function() })(x);
+      if(type !== void 0) {
+        return x.catch(() => void 0).then((v) => type(v));
       }
     };
   },
@@ -113,12 +97,57 @@ Object.assign(T, {
         catch(err) {
           return false;
         }
-      })).be.above(0)
+      }).length).be.above(0)
     ;
   },
-});
+  not(type) {
+    return (x) => should(() => type(x)).throw();
+  },
+  shape(t) {
+    return (x) => {
+      // T([T.Number(), T.String(), T.Array(T.Number())]) ~ [1, 'foo', [1, 42]]
+      if(t instanceof Array) {
+        should(x).be.an.Array();
+        return t.map((v, k) => v(x[k]));
+      }
+      // T({ foo: T.String(), bar: T.Number() }) ~ { foo: 'fizz', bar: 42 }
+      if(t instanceof Object) {
+        should(x).be.an.Object();
+        return Object.keys(t).map((k) => t[k](x[k]));
+      }
+      // T((x) => should(x).be.exactly(42)) ~ 42
+      if(t instanceof Function) {
+        t(x);
+      }
+    };
+  },
+};
 
-export default Object.assign(check, {
-  T,
-  wrap,
-});
+function assertTypes(types, args) {
+  should(types).be.an.Array();
+  return args.map((v, k) => types[k](v));
+}
+
+function wrap(argsT, valT, fn) {
+  if((typeof T.shouldTypeCheck === 'function' && !T.shouldTypeCheck()) || !T.shouldTypeCheck) {
+    return fn;
+  }
+  return function wrapped(...args) {
+    assertTypes(argsT, args);
+    const val = fn.apply(this, args);
+    assertTypes([valT], [val]);
+    return val;
+  };
+}
+
+function typecheck(argsT, valT, fn) {
+  if(fn !== void 0) {
+    return wrap(argsT, valT, fn);
+  }
+  return (target, key, desc) => ({
+    ...desc,
+    value: wrap(argsT, valT, desc.value),
+  });
+}
+
+export default Object.assign(T, { typecheck });

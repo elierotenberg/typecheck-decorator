@@ -1,9 +1,77 @@
-import should from 'should/as-function';
-import Promise from 'bluebird';
-Promise.longStackTraces();
-const { describe, it, before, after } = global;
+typecheck-decorator
+===================
 
-import T, { typecheck } from '../';
+Lightweight runtime typechecking with nice syntax. Can be smoothly enabled in dev and disabled in prod.
+
+
+## Example
+```js
+import T, { typecheck } from 'typecheck-decorator';
+
+class Person {
+  constructor(age, country, city, zipCode) {
+    this.age = age;
+    this.country = country;
+    this.city = city;
+    this.zipCode = zipCode;
+  }
+
+  // takes a number and returns a number
+  @typecheck([T.Number()], T.Number())
+  multiplyAgeBy(n) {
+    return this.age * n;
+  }
+
+  // takes an object describing the country and the city, and a zipcode,
+  // and returns a bool.
+  // the city can be either 'Paris' or 'New York'
+  // the country can be either 'France' or 'United States'
+  // the zipcode must be correctly formatted
+  @typecheck(
+    [
+      T.shape({
+        country: T.oneOf(T.exactly('France'), T.exactly('United States')),
+        city: T.oneOf(T.exactly('Paris'), T.exactly('New York')),
+      }),
+      T.String({ match: /^[0-9]{5}$/ }),
+    ],
+    T.bool()
+  )
+  livesIn({ country, city }, zipCode) {
+    return this.country === country && this.city === city;
+  }
+}
+
+// also works with regular functions
+// expects two numbers and returns their sum
+const sum = typecheck([T.Number(), T.Number()], T.Number(),
+  (a, b) => a + b,
+);
+```
+
+## API
+
+```typecheck(argsTypes = [], valueType = T.any(), fn)``` returns `fn` wrapped with type checks.
+
+```@typecheck(argsTypes = [], valueType = T.any())``` decorates a method with type checks.
+
+You can disable typechecking entirely by setting `T.shouldTypeCheck` to `false`. You can also specify a function
+to dynamically decide if types should be checked (upon calling `typecheck` or `@typecheck`), e.g using:
+```js
+T.shouldTypeCheck = () => process.env.SHOULD_TYPE_CHECK
+```
+
+By default, `T.shouldTypeCheck` is `process && process.env && process.env === 'developmment'`.
+
+Types can be described using the provided type descriptors and operators. A type being basically an assertion,
+you can easily implement your own using the `T` function, which creates a new type:
+
+```const zipCodeType = T((x) => assert(x.match(/^[0-9]{5}$/) !== null);```
+
+See the example test file below to have an idea of what type descriptors and operators are provided.
+
+```js
+mport T, { typecheck } from '../';
 
 describe('T', () => {
   it('T.any()', () => {
@@ -145,3 +213,4 @@ describe('typecheck', () => {
     should(() => new A('42', '42').sum()).throw();
   });
 });
+```
