@@ -82,6 +82,12 @@ describe('T', () => {
       T.Promise({ type: T.not(T.Number()) })(Promise.resolve('42')),
     ]);
   });
+  it('T.Error()', () => {
+    should(() => T.Error()(new Error())).not.throw();
+    should(() => T.Error()({ message: 'foo' })).throw();
+    should(() => T.Error({ message: 'foo' })(new Error('foo'))).not.throw();
+    should(() => T.Error({ message: 'foo' })(new Error('bar'))).throw();
+  });
   it('T.eachOf()', () => {
     class A {}
     class B extends A {}
@@ -118,6 +124,11 @@ describe('T', () => {
     should(() => T.shape([])(42)).throw();
     should(() => T.shape([T.Number()])([42])).not.throw();
     should(() => T.shape([T.Number()])(['42'])).throw();
+  });
+  it('T.toPropType()', () => {
+    const propTypeNumber = T.toPropType(T.Number());
+    should(propTypeNumber({ x: 1337 }, 'x')).not.be.an.Error();
+    should(propTypeNumber({ x: '1337' }, 'x')).be.an.Error();
   });
 });
 

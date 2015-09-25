@@ -3,7 +3,6 @@ typecheck-decorator
 
 Lightweight runtime typechecking with nice syntax. Can be smoothly enabled in dev and disabled in prod.
 
-
 ## Example
 ```js
 import T, { typecheck } from 'typecheck-decorator';
@@ -97,13 +96,7 @@ const sum = typecheck([T.Number(), T.Number()], T.Number(),
 
 ```@returns(valType)``` is an alias for ```@typecheck(void 0, valType)``` which ignores arguments types.
 
-You can disable typechecking entirely by setting `T.shouldTypeCheck` to `false`. You can also specify a function
-to dynamically decide if types should be checked (upon calling `typecheck` or `@typecheck`), e.g using:
-```js
-T.shouldTypeCheck = () => process.env.SHOULD_TYPE_CHECK
-```
-
-By default, `T.shouldTypeCheck` is `process && process.env && process.env === 'developmment'`.
+## Custom types
 
 Types can be described using the provided type descriptors and operators. A type being basically an assertion,
 you can easily implement your own:
@@ -119,11 +112,39 @@ const optZipCode = T.option(T.zipCode);
 const nullableStringOrOptZipCode = T.oneOf(optZipCode, T.nullable(T.String()))
 ```
 
-See the example test file below to have an idea of what type descriptors and operators are provided.
+See the example tests at the end of this file to have an idea of what type descriptors and operators are provided.
+
+## Disabling typechecking
+
+While runtime typecheck is immensely useful during development, some of it is often best left out of the production builds. On the other hand you may want to leave some typechecking active even in production, eg. for user input typechecking.
+
+The recommended way to do this is to pair `typecheck-decorator` with `babel-plugin-strip-decorator`. For example you can strip all decorators referred to as `devTypecheck` while keeping all decorators referred to as `prodTypecheck`, like the following:
 
 ```js
+import { typecheck } from 'typecheck-decorator';
+const devTypecheck = prodTypecheck = typecheck;
 
-import T, { typecheck } from '../';
+class A {
+  @devTypecheck(
+    [T.Number(), T.Number()],
+    T.Number()
+  ) // will be stripped away
+  static sum(a, b) {
+    return a + b;
+  }
+
+  @prodTypecheck(
+    [T.Number(), T.Number()],
+    T.Number()    
+  ) // will NOT be stripped
+  static untrustedSum(a, b) {
+    return a + b;
+  }
+}
+```
+
+```js
+import T, { typecheck, takes, returns } from 'typecheck-decorator';
 
 describe('T', () => {
   it('T.any()', () => {
@@ -202,6 +223,12 @@ describe('T', () => {
       T.Promise({ type: T.not(T.Number()) })(Promise.resolve('42')),
     ]);
   });
+  it('T.Error()', () => {
+    should(() => T.Error()(new Error())).not.throw();
+    should(() => T.Error()({ message: 'foo' })).throw();
+    should(() => T.Error({ message: 'foo' })(new Error('foo'))).not.throw();
+    should(() => T.Error({ message: 'foo' })(new Error('bar'))).throw();
+  });
   it('T.eachOf()', () => {
     class A {}
     class B extends A {}
@@ -238,6 +265,11 @@ describe('T', () => {
     should(() => T.shape([])(42)).throw();
     should(() => T.shape([T.Number()])([42])).not.throw();
     should(() => T.shape([T.Number()])(['42'])).throw();
+  });
+  it('T.toPropType()', () => {
+    const propTypeNumber = T.toPropType(T.Number());
+    should(propTypeNumber({ x: 1337 }, 'x')).not.be.an.Error();
+    should(propTypeNumber({ x: '1337' }, 'x')).be.an.Error();
   });
 });
 

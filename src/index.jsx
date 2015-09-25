@@ -1,7 +1,6 @@
 import should from 'should/as-function';
 
 const T = {
-  shouldTypeCheck: process && process.env && process.env.NODE_ENV === 'development',
   // T.any() ~ 243
   any() {
     return (x) => void x;
@@ -84,6 +83,14 @@ const T = {
       }
     };
   },
+  Error({ message } = {}) {
+    return (x) => {
+      should(x).be.an.Error();
+      if(message !== void 0) {
+        should(x.message).be.exactly(message);
+      }
+    };
+  },
   eachOf(...types) {
     return (x) => types.forEach((t) => t(x));
   },
@@ -127,6 +134,16 @@ const T = {
       }
     };
   },
+  toPropType(type) {
+    return (props, propName) => {
+      try {
+        type(props[propName]);
+      }
+      catch(err) {
+        return err;
+      }
+    };
+  },
 };
 
 function assertTypes(types, args) {
@@ -135,9 +152,6 @@ function assertTypes(types, args) {
 }
 
 function wrap(argsT, valT, fn) {
-  if((typeof T.shouldTypeCheck === 'function' && !T.shouldTypeCheck()) || !T.shouldTypeCheck) {
-    return fn;
-  }
   return function wrapped(...args) {
     if(argsT !== void 0) {
       assertTypes(argsT, args);
