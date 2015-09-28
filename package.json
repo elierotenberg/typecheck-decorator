@@ -1,6 +1,6 @@
 {
   "name": "typecheck-decorator",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Runtime arguments validation as ES7 decorators.",
   "main": "dist/index.js",
   "scripts": {
