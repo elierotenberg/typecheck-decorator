@@ -1,3 +1,4 @@
+import { inspect } from 'util';
 import should from 'should/as-function';
 
 const __DEV__ = process.env.NODE_ENV === 'development';
@@ -191,11 +192,29 @@ function renameFunction(fn, name, kind) {
 function wrap(argsT, valT, fn) {
   return function wrapped(...args) {
     if(argsT !== void 0) {
-      assertTypes(argsT, args);
+      try {
+        assertTypes(argsT, args);
+      }
+      catch(err) {
+        throw new TypeError([
+          `Function '${fn.name}' expected to take: ${inspect(argsT.map(argsT, (t) => t.name || t))}`,
+          `but instead got: ${inspect(args)}`,
+          err.toString(),
+        ].join('\n'));
+      }
     }
     const val = fn.apply(this, args);
     if(valT !== void 0) {
-      assertTypes([valT], [val]);
+      try {
+        assertTypes([valT], [val]);
+      }
+      catch(err) {
+        throw new TypeError([
+          `Function '${fn.name}' expected to take: ${inspect(valT.name || valT)}`,
+          `but instead got: ${inspect(args)}`,
+          err.toString(),
+        ].join('\n'));
+      }
     }
     return val;
   };

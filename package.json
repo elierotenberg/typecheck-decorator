@@ -4,6 +4,7 @@
   "description": "Runtime arguments validation as ES7 decorators.",
   "main": "dist/index.js",
   "scripts": {
+    "prepublish": "gulp",
     "test": "gulp test"
   },
   "repository": {
