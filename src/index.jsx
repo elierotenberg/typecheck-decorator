@@ -210,7 +210,7 @@ function wrap(argsT, valT, fn) {
       }
       catch(err) {
         throw new TypeError([
-          `Function '${fn.name}' expected to take: ${inspect(valT.name || valT)}`,
+          `Function '${fn.name}' expected to return: ${inspect(valT.name || valT)}`,
           `but instead returned: ${inspect(args)}`,
           err.toString(),
         ].join('\n'));
