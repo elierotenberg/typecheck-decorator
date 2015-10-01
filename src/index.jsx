@@ -198,7 +198,7 @@ function wrap(argsT, valT, fn) {
       catch(err) {
         throw new TypeError([
           `Function '${fn.name}' expected to take: ${inspect(argsT.map((t) => t.name || t))}`,
-          `but instead got: ${inspect(args)}`,
+          `but instead took: ${inspect(args)}`,
           err.toString(),
         ].join('\n'));
       }
@@ -211,7 +211,7 @@ function wrap(argsT, valT, fn) {
       catch(err) {
         throw new TypeError([
           `Function '${fn.name}' expected to take: ${inspect(valT.name || valT)}`,
-          `but instead got: ${inspect(args)}`,
+          `but instead returned: ${inspect(args)}`,
           err.toString(),
         ].join('\n'));
       }
